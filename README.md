@@ -1,18 +1,34 @@
 # ⚡ TaskFlow API
 
-A production-ready REST API built with **FastAPI + SQLite + JWT**, featuring role-based access control and a full-featured vanilla JS frontend.
+> A secure, scalable REST API with JWT authentication and role-based access control — built with Python, FastAPI, and SQLite.
+
+
+
+## Overview
+
+ a production-ready backend API assignment built for the **Backend Developer Intern** position. It demonstrates:
+
+- User registration and login with **bcrypt** password hashing
+- **JWT-based authentication** with token expiry
+- **Role-based access control** (user vs. admin)
+- Full **CRUD** for a secondary entity (Tasks)
+- **API versioning** (`/api/v1/`)
+- Automatic **Swagger UI** documentation (via FastAPI)
+- A **single-file frontend** (HTML + Fetch API) for testing all features
 
 ---
 
 ## Tech Stack
 
-| Layer    | Technology |
-|----------|------------|
-| Backend  | Python 3.11+, FastAPI |
-| Auth     | JWT (`python-jose`), bcrypt (`passlib`) |
-| Database | SQLite via SQLAlchemy ORM |
-| Frontend | Vanilla HTML + CSS + Fetch API |
-| Docs     | Swagger UI (auto-generated at `/docs`) |
+| Layer       | Technology                               |
+|-------------|------------------------------------------|
+| Language    | Python 3.11+                             |
+| Framework   | FastAPI                                  |
+| Auth        | JWT via `python-jose`, bcrypt via `passlib` |
+| Database    | SQLite (via SQLAlchemy ORM)              |
+| Validation  | Pydantic v2                              |
+| Frontend    | Vanilla HTML + CSS + Fetch API           |
+| API Docs    | Swagger UI (auto-generated at `/docs`)   |
 
 ---
 
@@ -22,140 +38,207 @@ A production-ready REST API built with **FastAPI + SQLite + JWT**, featuring rol
 taskflow/
 ├── backend/
 │   ├── app/
-│   │   ├── main.py               # FastAPI app, CORS, startup
+│   │   ├── main.py                    # App entry point, CORS, startup
 │   │   ├── core/
-│   │   │   ├── config.py         # Settings (env vars)
-│   │   │   └── security.py       # JWT + password hashing
+│   │   │   ├── config.py              # Settings loaded from .env
+│   │   │   └── security.py            # JWT creation/decoding, password hashing
 │   │   ├── db/
-│   │   │   └── database.py       # SQLAlchemy engine + session
+│   │   │   └── database.py            # SQLAlchemy engine, session, Base
 │   │   ├── models/
-│   │   │   ├── user.py           # User ORM model
-│   │   │   └── task.py           # Task ORM model
+│   │   │   ├── user.py                # User ORM model
+│   │   │   └── task.py                # Task ORM model
 │   │   ├── schemas/
-│   │   │   ├── auth.py           # Pydantic request/response schemas
-│   │   │   └── task.py
+│   │   │   ├── auth.py                # Pydantic schemas for auth
+│   │   │   └── task.py                # Pydantic schemas for tasks
 │   │   └── api/
-│   │       ├── deps.py           # Auth dependencies
+│   │       ├── deps.py                # Auth dependencies (get_current_user, require_admin)
 │   │       └── v1/
-│   │           ├── router.py     # Combines all routers
+│   │           ├── router.py          # Combines all routers under /api/v1
 │   │           └── endpoints/
-│   │               ├── auth.py   # /auth/register, /auth/login
-│   │               ├── users.py  # /users/me
-│   │               ├── tasks.py  # /tasks CRUD
-│   │               └── admin.py  # /admin/* (admin only)
-│   ├── .env
+│   │               ├── auth.py        # POST /auth/register, POST /auth/login
+│   │               ├── users.py       # GET /users/me
+│   │               ├── tasks.py       # CRUD /tasks
+│   │               └── admin.py       # Admin-only /admin/* endpoints
+│   ├── .env                           # Local config (gitignored)
+│   ├── .env.example                   # Template — copy to .env
 │   └── requirements.txt
 └── frontend/
-    └── index.html                # Single-file SPA
+    └── index.html                     # Single-file SPA
 ```
 
 ---
 
-## Quick Start
 
-### 1. Clone & install
+### Prerequisites
+
+- Python 3.11+
+- pip
+
+### 1. Clone the repository
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/your-username/taskflow.git
 cd taskflow/backend
+```
 
+### 2. Create a virtual environment
+
+```bash
 python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
 
+# macOS / Linux
+source venv/bin/activate
+
+# Windows
+venv\Scripts\activate
+```
+
+### 3. Install dependencies
+
+```bash
 pip install -r requirements.txt
 ```
 
-### 2. Configure environment
+### 4. Configure environment
 
 ```bash
-cp .env .env.local
-# Edit .env — change SECRET_KEY before deploying!
+cp .env.example .env
 ```
 
-### 3. Run the API
+Open `.env` and set a strong `SECRET_KEY`:
+
+```bash
+# Generate one automatically:
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+### 5. Run the server
 
 ```bash
 uvicorn app.main:app --reload
-# API running at http://localhost:8000
-# Swagger UI at http://localhost:8000/docs
 ```
 
-### 4. Open the frontend
+The API is now running at:
 
-Open `frontend/index.html` in your browser — or serve it:
+| URL | Description |
+|-----|-------------|
+| `http://localhost:8000` | Health check |
+| `http://localhost:8000/docs` | Swagger UI (interactive docs) |
+| `http://localhost:8000/redoc` | ReDoc documentation |
+
+### 6. Open the frontend
 
 ```bash
 cd ../frontend
 python -m http.server 3000
-# Visit http://localhost:3000
+```
+
+Visit `http://localhost:3000` — or just open `frontend/index.html` directly in a browser.
+
+---
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SECRET_KEY` | *(required)* | JWT signing secret — **change before deploying** |
+| `ALGORITHM` | `HS256` | JWT signing algorithm |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | Token lifetime in minutes |
+| `DATABASE_URL` | `sqlite:///./taskflow.db` | Database connection string |
+
+To switch to PostgreSQL in production, update `DATABASE_URL`:
+
+```env
+DATABASE_URL=postgresql://user:password@localhost:5432/taskflow
 ```
 
 ---
 
 ## API Reference
 
-### Base URL: `http://localhost:8000/api/v1`
+**Base URL:** `http://localhost:8000/api/v1`
 
-#### Auth (public)
 
-| Method | Endpoint         | Description         |
-|--------|-----------------|---------------------|
-| POST   | `/auth/register` | Register new user   |
-| POST   | `/auth/login`    | Login → get JWT     |
 
-#### Users (authenticated)
+### Auth — Public
 
-| Method | Endpoint     | Description        |
-|--------|--------------|--------------------|
-| GET    | `/users/me`  | Get own profile    |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/auth/register` | Register a new user |
+| `POST` | `/auth/login` | Login and receive a JWT |
 
-#### Tasks (authenticated)
-
-| Method | Endpoint        | Description                          |
-|--------|-----------------|--------------------------------------|
-| POST   | `/tasks`        | Create task                          |
-| GET    | `/tasks`        | List tasks (own; admin sees all)     |
-| GET    | `/tasks/{id}`   | Get single task                      |
-| PATCH  | `/tasks/{id}`   | Partial update                       |
-| DELETE | `/tasks/{id}`   | Delete task                          |
-
-#### Admin only
-
-| Method | Endpoint                        | Description          |
-|--------|---------------------------------|----------------------|
-| GET    | `/admin/users`                  | List all users       |
-| PATCH  | `/admin/users/{id}/role`        | Change user role     |
-| PATCH  | `/admin/users/{id}/deactivate`  | Deactivate user      |
-
----
-
-## Role-Based Access
-
-| Action               | `user` | `admin` |
-|----------------------|--------|---------|
-| Register / Login     | ✅     | ✅      |
-| CRUD own tasks       | ✅     | ✅      |
-| View all users' tasks| ❌     | ✅      |
-| Manage user roles    | ❌     | ✅      |
-| Deactivate users     | ❌     | ✅      |
-
-**Make yourself admin** — after registering, use the Swagger UI at `/docs` or SQLite directly:
+**Register example:**
 
 ```bash
-sqlite3 backend/taskflow.db "UPDATE users SET role='admin' WHERE username='yourname';"
+curl -X POST http://localhost:8000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username": "alice", "email": "alice@example.com", "password": "SecurePass1"}'
+```
+
+**Login example:**
+
+```bash
+curl -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "alice", "password": "SecurePass1"}'
+```
+
+```json
+{ "access_token": "eyJ...", "token_type": "bearer" }
+```
+
+### Users — Authenticated
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/users/me` | Get current user's profile |
+
+### Tasks — Authenticated
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/tasks` | Create a new task |
+| `GET` | `/tasks` | List tasks — supports `?status=` and `?priority=` filters |
+| `GET` | `/tasks/{id}` | Get a single task |
+| `PATCH` | `/tasks/{id}` | Partially update a task |
+| `DELETE` | `/tasks/{id}` | Delete a task |
+
+**Task fields:**
+
+| Field | Type | Values |
+|-------|------|--------|
+| `title` | string | 1–200 characters |
+| `description` | string (optional) | up to 2000 characters |
+| `status` | enum | `todo` · `in_progress` · `done` |
+| `priority` | enum | `low` · `medium` · `high` |
+
+### Admin — Admin Role Required
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/admin/users` | List all registered users |
+| `PATCH` | `/admin/users/{id}/role?role=admin` | Promote or demote a user |
+| `PATCH` | `/admin/users/{id}/deactivate` | Deactivate a user account |
+
+**Promote yourself to admin** (first time setup):
+
+```bash
+sqlite3 backend/taskflow.db "UPDATE users SET role='admin' WHERE username='alice';"
 ```
 
 ---
 
-## Security Practices
+## Role-Based Access Control
 
-- Passwords hashed with **bcrypt** (cost factor 12) — never stored in plain text
-- JWT tokens signed with HS256 — expire after 30 minutes
-- `Authorization: Bearer <token>` header required on all protected routes
-- Input validation via **Pydantic v2** — all fields typed, length-limited, pattern-matched
-- Password policy enforced: min 8 chars, 1 uppercase, 1 digit
-- CORS configurable per environment
-- SQL injection impossible — SQLAlchemy ORM with parameterized queries
+| Action | `user` | `admin` |
+|--------|:------:|:-------:|
+| Register / Login | ✅ | ✅ |
+| View own profile | ✅ | ✅ |
+| Create / edit / delete own tasks | ✅ | ✅ |
+| View other users' tasks | ❌ | ✅ |
+| List all users | ❌ | ✅ |
+| Change user roles | ❌ | ✅ |
+| Deactivate users | ❌ | ✅ |
 
 ---
 
@@ -163,55 +246,82 @@ sqlite3 backend/taskflow.db "UPDATE users SET role='admin' WHERE username='yourn
 
 ```
 users
-├── id           INTEGER PK
-├── username     VARCHAR(50) UNIQUE
-├── email        VARCHAR(100) UNIQUE
-├── hashed_password VARCHAR
-├── role         ENUM(user, admin)
-├── is_active    BOOLEAN
-└── created_at   DATETIME
+├── id               INTEGER  PRIMARY KEY
+├── username         VARCHAR(50)   UNIQUE  NOT NULL
+├── email            VARCHAR(100)  UNIQUE  NOT NULL
+├── hashed_password  VARCHAR       NOT NULL
+├── role             ENUM(user, admin)   DEFAULT 'user'
+├── is_active        BOOLEAN  DEFAULT TRUE
+└── created_at       DATETIME  DEFAULT now()
 
 tasks
-├── id           INTEGER PK
-├── title        VARCHAR(200)
-├── description  TEXT
-├── status       ENUM(todo, in_progress, done)
-├── priority     ENUM(low, medium, high)
-├── owner_id     FK → users.id
-├── created_at   DATETIME
-└── updated_at   DATETIME
+├── id               INTEGER  PRIMARY KEY
+├── title            VARCHAR(200)  NOT NULL
+├── description      TEXT
+├── status           ENUM(todo, in_progress, done)  DEFAULT 'todo'
+├── priority         ENUM(low, medium, high)  DEFAULT 'medium'
+├── owner_id         INTEGER  FK → users.id
+├── created_at       DATETIME  DEFAULT now()
+└── updated_at       DATETIME  ON UPDATE now()
 ```
 
----
-
-## Scalability Notes
-
-See [`SCALABILITY.md`](./SCALABILITY.md) for full details. Summary:
-
-- **API versioning** (`/api/v1/`) — add v2 without breaking existing clients
-- **Modular structure** — add new modules (e.g. `comments`, `projects`) by adding a folder under `api/v1/endpoints/`
-- **Database** — swap SQLite → PostgreSQL by changing one line in `.env` (`DATABASE_URL`)
-- **Caching** — add Redis in front of `GET /tasks` to cache per-user task lists
-- **Horizontal scaling** — stateless JWT auth means any number of API instances can run behind a load balancer
-- **Docker** — add `Dockerfile` + `docker-compose.yml` for containerized deployment
-- **Background jobs** — plug in Celery + Redis for async tasks (email notifications, exports)
+The database file (`taskflow.db`) is created automatically on first run — no migrations or setup needed.
 
 ---
 
-## Running Tests (example)
+## Security Practices
 
-```bash
-pip install pytest httpx
-pytest tests/
-```
+- **Password hashing** — bcrypt with cost factor 12. Passwords are never stored in plain text.
+- **JWT authentication** — tokens signed with HS256, expire after 30 minutes, and carry the user's ID and role in the payload.
+- **Password policy** — minimum 8 characters, at least one uppercase letter, at least one digit (enforced server-side by Pydantic).
+- **Input validation** — all request bodies validated via Pydantic v2 before touching the database. Fields are type-checked, length-limited, and pattern-matched.
+- **SQL injection prevention** — SQLAlchemy ORM uses parameterized queries exclusively.
+- **Ownership checks** — users can only read and modify their own tasks. Admins bypass this restriction.
+- **CORS** — configured in `main.py`. Tighten `allow_origins` to your frontend's domain before going to production.
 
 ---
 
-## Environment Variables
+## Frontend
 
-| Variable                     | Default     | Description                  |
-|------------------------------|-------------|------------------------------|
-| `SECRET_KEY`                 | (change me) | JWT signing secret           |
-| `ALGORITHM`                  | `HS256`     | JWT algorithm                |
-| `ACCESS_TOKEN_EXPIRE_MINUTES`| `30`        | Token lifetime               |
-| `DATABASE_URL`               | `sqlite:///./taskflow.db` | DB connection |
+The frontend is a single `index.html` file — no build step, no npm, no framework required.
+
+**Features:**
+
+- Register and login with inline error and success messages
+- JWT token stored in `localStorage`, sent automatically with every API request
+- Dashboard with live task statistics (total, to-do, in progress, done)
+- Create, edit, and delete tasks with status and priority selectors
+- Filter task list by status
+- Admin panel (visible only to admin role) — list all users, promote/demote, deactivate accounts
+
+---
+
+## Scalability
+
+See [`SCALABILITY.md`](./SCALABILITY.md) for the full write-up. Key points:
+
+- **Database** — swap SQLite → PostgreSQL by changing one line in `.env`. SQLAlchemy handles the rest.
+- **Horizontal scaling** — stateless JWT means any number of API instances run behind a load balancer with no shared session state.
+- **Caching** — add Redis in front of `GET /tasks` to cache per-user results and reduce DB load.
+- **Modular structure** — new features (e.g., `projects`, `comments`) are added by creating a file under `api/v1/endpoints/` and one line in `router.py`.
+- **API versioning** — already in place at `/api/v1/`. Add `/api/v2/` without breaking existing clients.
+- **Containerization** — add a `Dockerfile` + `docker-compose.yml` to run the API, database, and Redis as a single stack.
+
+---
+
+## Roadmap / Optional Enhancements
+
+- [ ] Refresh tokens for extended sessions
+- [ ] Email verification on registration
+- [ ] Redis caching for task list queries
+- [ ] Rate limiting with `slowapi`
+- [ ] Pagination metadata in list responses
+- [ ] Docker + docker-compose setup
+- [ ] Pytest test suite with `httpx`
+- [ ] CI/CD pipeline via GitHub Actions
+
+---
+
+## License
+
+MIT
